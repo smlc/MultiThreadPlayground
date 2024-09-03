@@ -1,12 +1,9 @@
 package com.mars.learn.deferredcallback;
 
-import java.time.Duration;
+import java.util.HashSet;
 import java.util.PriorityQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.Set;
+import java.util.concurrent.*;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -23,36 +20,85 @@ public class DeferredCallback {
     ScheduledExecutorService scheduler;
     // Run by the Executor Thread
     public void start() throws InterruptedException, ExecutionException {
-        scheduler = Executors.newSingleThreadScheduledExecutor();
-        if(queue.isEmpty()) return;
 
-        Callback callback = queue.peek();
-        future = scheduler.schedule(() -> {
+        long sleepFor = 0;
+        while(true) {
+            lock.lock();
+            while(queue.isEmpty()) {
+                //The queue is empty wait for the first callback
+                newCallbackArrived.await();
+            }
 
-            callback.execute();
-            queue.remove(callback);
-        }, callback.executeAt, TimeUnit.SECONDS);
+            //Check for all callback
+            while(!queue.isEmpty()) {
+                //Got first callback, check how long we need to wait
+                sleepFor = calculateSleepTime();
 
-        future.get(); // Wait for the scheduled task to finish
-        scheduler.shutdown();
+                if(sleepFor < 0)
+                    break;
+
+                newCallbackArrived.await(sleepFor, TimeUnit.MILLISECONDS);
+
+            }
+
+            queue.poll().execute();
+
+            lock.unlock();
+        }
 
     }
+
+    private long calculateSleepTime() {
+        long currentTime = System.currentTimeMillis();
+        return  queue.peek().executeAt - currentTime;
+    }
+
 
     public void registerCallback(Callback callback) throws InterruptedException {
         //Do I need to sync this method ?
         // How to add mutex around the add method ?
         // We will use rentrant lock as mutex
         lock.lock();
-        if(!queue.isEmpty() && (queue.peek().executeAt >  callback.executeAt)) {
-            queue.add(callback);
-        } else if (!queue.isEmpty() && (queue.peek().executeAt < callback.executeAt)) {
-
-        }
         queue.add(callback);
-
-
         newCallbackArrived.signalAll();
         lock.unlock();
 
+    }
+
+    public static void main( String args[] ) throws Exception{
+        final DeferredCallback deferredCallbackExecutor = new DeferredCallback();
+        Set<Thread> allThreads = new HashSet<Thread>();
+
+        Thread service = Thread.ofVirtual().unstarted(() -> {
+            try {
+                deferredCallbackExecutor.start();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        service.start();
+
+        for (int i = 0; i < 10; i++) {
+            Thread thread = Thread.ofVirtual().unstarted(() -> {
+
+                Callback cb = new Callback(1, "Hello this is " + Thread.currentThread().getName());
+                try {
+                    deferredCallbackExecutor.registerCallback(cb);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+
+            });
+            thread.setName("Thread_" + (i + 1));
+            thread.start();
+            allThreads.add(thread);
+            Thread.sleep(1000);
+        }
+
+        for (Thread t : allThreads) {
+            t.join();
+        }
     }
 }
