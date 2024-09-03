@@ -35,3 +35,6 @@ ReentrantLock resources:
 - https://docs.oracle.com/javase/7/docs/api/java/util/concurrent/locks/ReentrantLock.html
 - https://stackoverflow.com/a/11821900/7672189
 - https://web.mit.edu/6.005/www/fa15/classes/23-locks/
+
+Scheduler resources :
+https://akhiilgupta.medium.com/design-a-multi-threaded-task-scheduler-lld-multi-threaded-construct-eb090c5a8727
