@@ -43,3 +43,4 @@ https://akhiilgupta.medium.com/design-a-multi-threaded-task-scheduler-lld-multi-
 Ressources : 
 - The art of multiprocessor programming : https://www.goodreads.com/book/show/3131525-the-art-of-multiprocessor-programming
 - Seven concurrency problem in seven week : https://www.goodreads.com/book/show/18467564-seven-concurrency-models-in-seven-weeks
+- The java.util.concurrent Synchronizer Framework, Doug Lea
