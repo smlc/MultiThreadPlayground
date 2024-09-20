@@ -38,3 +38,8 @@ ReentrantLock resources:
 
 Scheduler resources :
 https://akhiilgupta.medium.com/design-a-multi-threaded-task-scheduler-lld-multi-threaded-construct-eb090c5a8727
+
+
+Ressources : 
+- The art of multiprocessor programming : https://www.goodreads.com/book/show/3131525-the-art-of-multiprocessor-programming
+- Seven concurrency problem in seven week : https://www.goodreads.com/book/show/18467564-seven-concurrency-models-in-seven-weeks
