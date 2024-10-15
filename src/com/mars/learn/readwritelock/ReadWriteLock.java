@@ -1,38 +1,51 @@
 package com.mars.learn.readwritelock;
 
-import com.mars.learn.ratelimit.RateLimitTokenBucket;
-
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class ReadWriteLock {
 
-    Lock writeLock = new ReentrantLock();
-    Condition writting = writeLock.newCondition();
-    Lock readLock = new ReentrantLock();
-
+    Lock lock = new ReentrantLock();
+    Condition writting = lock.newCondition();
+    Condition reading = lock.newCondition();
+    boolean isWriting = false;
     private int numbersOfReader = 0;
-    public void acquireReadLock() {
-        readLock.lock();
+    public void acquireReadLock() throws InterruptedException {
+        lock.lock();
+        while(isWriting)
+            reading.await();
+
         numbersOfReader++;
-        if(numbersOfReader == 1) writeLock.lock();
-        readLock.unlock();
+
+        lock.unlock();
     }
 
     public void releaseReadLock() {
-        readLock.lock();
+        lock.lock();
         numbersOfReader--;
-        if(numbersOfReader == 0) writeLock.unlock();
-        readLock.unlock();
+        if (numbersOfReader == 0) {
+            writting.signal();
+        }
+        lock.unlock();
 
     }
 
-    public void acquireWriteLock() {
-        writeLock.lock();
+    public void acquireWriteLock() throws InterruptedException {
+        lock.lock();
+        while (isWriting || numbersOfReader != 0) {
+            writting.await();
+        }
+        isWriting = true;
+        lock.unlock();
+
     }
     public void releaseWriteLock() {
-        writeLock.unlock();
+        lock.lock();
+        isWriting = false;
+        reading.signalAll();
+        writting.signal();
+        lock.unlock();
     }
 
 
@@ -45,7 +58,7 @@ public class ReadWriteLock {
             @Override
             public void run() {
                 try {
-
+                    Thread.currentThread().setName("thread-t1");
                     System.out.println("Attempting to acquire write lock in t1: " + System.currentTimeMillis());
                     rwl.acquireWriteLock();
                     System.out.println("write lock acquired t1: " + +System.currentTimeMillis());
@@ -65,9 +78,13 @@ public class ReadWriteLock {
 
             @Override
             public void run() {
-
+                Thread.currentThread().setName("thread-t2");
                 System.out.println("Attempting to acquire write lock in t2: " + System.currentTimeMillis());
-                rwl.acquireWriteLock();
+                try {
+                    rwl.acquireWriteLock();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
                 System.out.println("write lock acquired t2: " + System.currentTimeMillis());
 
             }
@@ -77,8 +94,12 @@ public class ReadWriteLock {
 
             @Override
             public void run() {
-
-                rwl.acquireReadLock();
+                Thread.currentThread().setName("thread-tReader1");
+                try {
+                    rwl.acquireReadLock();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
                 System.out.println("Read lock acquired: " + System.currentTimeMillis());
 
             }
@@ -88,6 +109,7 @@ public class ReadWriteLock {
 
             @Override
             public void run() {
+                Thread.currentThread().setName("thread-tReader2");
                 System.out.println("Read lock about to release: " + System.currentTimeMillis());
                 rwl.releaseReadLock();
                 System.out.println("Read lock released: " + System.currentTimeMillis());
