@@ -39,6 +39,8 @@ ReentrantLock resources:
 Scheduler resources :
 https://akhiilgupta.medium.com/design-a-multi-threaded-task-scheduler-lld-multi-threaded-construct-eb090c5a8727
 
+Ressources into this repo :
+- [Implementing Lock algo](https://github.com/smlc/MultiThreadPlayground/blob/main/src/com/mars/learn/locks/README.md)
 
 Ressources : 
 - The art of multiprocessor programming : https://www.goodreads.com/book/show/3131525-the-art-of-multiprocessor-programming
